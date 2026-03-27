@@ -3,13 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using ControleDespesas.Data;
 using ControleDespesas.Models;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 
 namespace ControleDespesas.Controllers
 {
+    [Authorize]
     public class DespesasController : Controller
     {
         private readonly AppDbContext _context;
@@ -22,23 +24,28 @@ namespace ControleDespesas.Controllers
         // GET: Despesas
         public async Task<IActionResult> Index()
         {
-            return View(await _context.Despesas.ToListAsync());
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var despesas = await _context.Despesas
+                .Where(d => d.UserId == userId)
+                .ToListAsync();
+
+            ViewBag.Total = despesas.Sum(x => x.Valor);
+
+            return View(despesas);
         }
 
         // GET: Despesas/Details/5
         public async Task<IActionResult> Details(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             var despesa = await _context.Despesas
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (despesa == null)
-            {
-                return NotFound();
-            }
+                .FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
+
+            if (despesa == null) return NotFound();
 
             return View(despesa);
         }
@@ -50,86 +57,86 @@ namespace ControleDespesas.Controllers
         }
 
         // POST: Despesas/Create
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create([Bind("Id,Nome,Valor,Data,Categoria")] Despesa despesa)
+        public async Task<IActionResult> Create(Despesa despesa)
         {
             if (ModelState.IsValid)
             {
+                despesa.UserId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
                 _context.Add(despesa);
                 await _context.SaveChangesAsync();
                 return RedirectToAction(nameof(Index));
             }
+
             return View(despesa);
         }
 
         // GET: Despesas/Edit/5
         public async Task<IActionResult> Edit(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
 
-            var despesa = await _context.Despesas.FindAsync(id);
-            if (despesa == null)
-            {
-                return NotFound();
-            }
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var despesa = await _context.Despesas
+                .FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId);
+
+            if (despesa == null) return NotFound();
+
             return View(despesa);
         }
 
         // POST: Despesas/Edit/5
-        // To protect from overposting attacks, enable the specific properties you want to bind to.
-        // For more details, see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Edit(int id, [Bind("Id,Nome,Valor,Data,Categoria")] Despesa despesa)
+        public async Task<IActionResult> Edit(int id, Despesa despesa)
         {
-            if (id != despesa.Id)
-            {
-                return NotFound();
-            }
+            if (id != despesa.Id) return NotFound();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var despesaBanco = await _context.Despesas
+                .AsNoTracking()
+                .FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId);
+
+            if (despesaBanco == null) return NotFound();
 
             if (ModelState.IsValid)
             {
                 try
                 {
+                    despesa.UserId = userId; // garante que não perde vínculo
+
                     _context.Update(despesa);
                     await _context.SaveChangesAsync();
                 }
                 catch (DbUpdateConcurrencyException)
                 {
                     if (!DespesaExists(despesa.Id))
-                    {
                         return NotFound();
-                    }
                     else
-                    {
                         throw;
-                    }
                 }
+
                 return RedirectToAction(nameof(Index));
             }
+
             return View(despesa);
         }
 
         // GET: Despesas/Delete/5
         public async Task<IActionResult> Delete(int? id)
         {
-            if (id == null)
-            {
-                return NotFound();
-            }
+            if (id == null) return NotFound();
+
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
 
             var despesa = await _context.Despesas
-                .FirstOrDefaultAsync(m => m.Id == id);
-            if (despesa == null)
-            {
-                return NotFound();
-            }
+                .FirstOrDefaultAsync(m => m.Id == id && m.UserId == userId);
+
+            if (despesa == null) return NotFound();
 
             return View(despesa);
         }
@@ -139,13 +146,17 @@ namespace ControleDespesas.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var despesa = await _context.Despesas.FindAsync(id);
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var despesa = await _context.Despesas
+                .FirstOrDefaultAsync(d => d.Id == id && d.UserId == userId);
+
             if (despesa != null)
             {
                 _context.Despesas.Remove(despesa);
+                await _context.SaveChangesAsync();
             }
 
-            await _context.SaveChangesAsync();
             return RedirectToAction(nameof(Index));
         }
 

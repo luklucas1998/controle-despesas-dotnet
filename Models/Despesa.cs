@@ -16,5 +16,7 @@ namespace ControleDespesas.Models
         public DateTime Data { get; set; }
 
         public string Categoria { get; set; }
+
+        public string? UserId { get; set; }
     }
 }
