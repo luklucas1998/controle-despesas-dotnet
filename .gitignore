@@ -1,4 +1,7 @@
-.vs
-bin
-obj
-.db
+bin/
+obj/
+.vs/
+
+*.db
+*.db-shm
+*.db-wal
