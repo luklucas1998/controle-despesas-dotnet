@@ -1,0 +1,81 @@
+﻿@model IEnumerable<dynamic>
+
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="container mt-4">
+
+    <!-- Título -->
+    <h2 class="fw-bold text-center mb-3">
+        📊 Seus Gastos
+    </h2>
+
+    <!-- Total -->
+    <div class="text-center mb-4">
+        <h3 class="fw-bold text-success">
+            R$ @ViewBag.Total
+        </h3>
+        <span class="text-muted">Total gasto</span>
+    </div>
+
+    <!-- Card do gráfico -->
+    <div class="card shadow-lg border-0 rounded-4 p-4 text-center">
+
+        <div style="max-width: 350px; margin: auto;">
+            <canvas id="graficoDespesas"></canvas>
+        </div>
+
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+    var categorias = [];
+    var valores = [];
+
+    @foreach (var item in Model)
+    {
+        <text>
+                categorias.push("@item.Categoria");
+                valores.push(@item.Total);
+        </text>
+    }
+
+    var ctx = document.getElementById('graficoDespesas').getContext('2d');
+
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: categorias,
+            datasets: [{
+                data: valores,
+                backgroundColor: [
+                    '#6f42c1',
+                    '#0d6efd',
+                    '#198754',
+                    '#ffc107',
+                    '#dc3545'
+                ],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            cutout: '70%', // 🔥 estilo app moderno
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        font: {
+                            size: 14
+                        }
+                    }
+                }
+            }
+        }
+    });
+</script>

@@ -160,6 +160,28 @@ namespace ControleDespesas.Controllers
             return RedirectToAction(nameof(Index));
         }
 
+        public async Task<IActionResult> Dashboard()
+        {
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+
+            var despesas = await _context.Despesas
+                .Where(d => d.UserId == userId)
+                .ToListAsync(); // 🔥 traz tudo primeiro
+
+            var dados = despesas
+                .GroupBy(d => d.Categoria)
+                .Select(g => new
+                {
+                    Categoria = g.Key,
+                    Total = g.Sum(x => x.Valor)
+                })
+                .ToList();
+
+            ViewBag.Total = dados.Sum(x => x.Total);
+
+            return View(dados);
+        }
+
         private bool DespesaExists(int id)
         {
             return _context.Despesas.Any(e => e.Id == id);
